@@ -10,8 +10,26 @@ static struct DjuiSlider *sTouchConfigSliderR = NULL;
 static struct DjuiSlider *sTouchConfigSliderG = NULL;
 static struct DjuiSlider *sTouchConfigSliderB = NULL;
 static struct DjuiSlider *sTouchConfigSliderA = NULL;
-static struct DjuiSlider *sTouchConfigSliderS = NULL;
+static struct DjuiSelectionbox *sTouchConfigSizeBox = NULL;
+static unsigned int sTouchSizeIndex = 0;
 static struct DjuiCheckbox *sTouchConfigCheckboxH = NULL;
+
+static unsigned int find_valid_size_index(unsigned int size) {
+    static const unsigned int valid_sizes[] = { 5, 6, 8, 10, 16, 20, 26 };
+    unsigned int best = 0;
+    unsigned int best_dist = (size > valid_sizes[0]) ? (size - valid_sizes[0]) : (valid_sizes[0] - size);
+    for (int i = 1; i < 7; i++) {
+        unsigned int d = (size > valid_sizes[i]) ? (size - valid_sizes[i]) : (valid_sizes[i] - size);
+        if (d < best_dist) { best_dist = d; best = i; }
+    }
+    return best;
+}
+
+static void djui_panel_touch_controls_editor_size_changed(struct DjuiBase* caller) {
+    struct DjuiSelectionbox* selectionbox = (struct DjuiSelectionbox*)caller;
+    static const unsigned int valid_sizes[] = { 5, 6, 8, 10, 16, 20, 26 };
+    configControlElements[gSelectedTouchElement].size = valid_sizes[*selectionbox->value];
+}
 
 static void djui_panel_touch_controls_editor_update_values(struct DjuiBase* caller) {
     struct DjuiSelectionbox* selectionbox = (struct DjuiSelectionbox*)caller;
@@ -20,20 +38,24 @@ static void djui_panel_touch_controls_editor_update_values(struct DjuiBase* call
     djui_base_set_enabled(&sTouchConfigSliderG->base, enabled);
     djui_base_set_enabled(&sTouchConfigSliderB->base, enabled);
     djui_base_set_enabled(&sTouchConfigSliderA->base, enabled);
-    djui_base_set_enabled(&sTouchConfigSliderS->base, enabled);
+    djui_base_set_enabled(&sTouchConfigSizeBox->base, enabled);
     djui_base_set_enabled(&sTouchConfigCheckboxH->base, enabled);
 
     sTouchConfigSliderR->value = &configControlElements[*selectionbox->value].r;
     sTouchConfigSliderG->value = &configControlElements[*selectionbox->value].g;
     sTouchConfigSliderB->value = &configControlElements[*selectionbox->value].b;
     sTouchConfigSliderA->value = &configControlElements[*selectionbox->value].a;
-    sTouchConfigSliderS->value = &configControlElements[*selectionbox->value].size;
+    {
+        static const unsigned int valid_sizes[] = { 5, 6, 8, 10, 16, 20, 26 };
+        sTouchSizeIndex = find_valid_size_index(configControlElements[gSelectedTouchElement].size);
+        configControlElements[gSelectedTouchElement].size = valid_sizes[sTouchSizeIndex];
+    }
     sTouchConfigCheckboxH->value = &configControlElements[*selectionbox->value].hidden;
     djui_slider_update_value(&sTouchConfigSliderR->base);
     djui_slider_update_value(&sTouchConfigSliderG->base);
     djui_slider_update_value(&sTouchConfigSliderB->base);
     djui_slider_update_value(&sTouchConfigSliderA->base);
-    djui_slider_update_value(&sTouchConfigSliderS->base);
+    djui_selectionbox_update_value(&sTouchConfigSizeBox->base);
     djui_checkbox_update_value(&sTouchConfigCheckboxH->base);
 }
 
@@ -44,7 +66,7 @@ static void djui_panel_touch_controls_editor_update_anchor(struct DjuiBase* call
     djui_base_set_enabled(&sTouchConfigSliderG->base, enabled);
     djui_base_set_enabled(&sTouchConfigSliderB->base, enabled);
     djui_base_set_enabled(&sTouchConfigSliderA->base, enabled);
-    djui_base_set_enabled(&sTouchConfigSliderS->base, enabled);
+    djui_base_set_enabled(&sTouchConfigSizeBox->base, enabled);
 }
 
 static void djui_panel_touch_controls_editor_move(struct DjuiBase* caller) {
@@ -100,14 +122,20 @@ void djui_panel_touch_controls_editor_create(struct DjuiBase* caller) {
 
         sTouchConfigCheckboxH = djui_checkbox_create(body, "Hidden"/*DLANG(TOUCH_CONTROLS, TOUCH_CONTROLS_HIDE)*/, &configControlElements[gSelectedTouchElement].hidden, djui_panel_touch_controls_editor_update_anchor);
 
-        sTouchConfigSliderS = djui_slider_create(body, DLANG(TOUCH_CONTROLS, TOUCH_CONTROLS_SCALE), &configControlElements[gSelectedTouchElement].size, 5, 30, NULL);
+        {
+            static const unsigned int valid_sizes[] = { 5, 6, 8, 10, 16, 20, 26 };
+            sTouchSizeIndex = find_valid_size_index(configControlElements[gSelectedTouchElement].size);
+            configControlElements[gSelectedTouchElement].size = valid_sizes[sTouchSizeIndex];
+            char* sizeChoices[7] = { "5", "6", "8", "10", "16", "20", "26" };
+            sTouchConfigSizeBox = djui_selectionbox_create(body, DLANG(TOUCH_CONTROLS, TOUCH_CONTROLS_SCALE), sizeChoices, 7, &sTouchSizeIndex, djui_panel_touch_controls_editor_size_changed);
+        }
 
         if (gSelectedTouchElement == TOUCH_MOUSE) {
             djui_base_set_enabled(&sTouchConfigSliderR->base, false);
             djui_base_set_enabled(&sTouchConfigSliderG->base, false);
             djui_base_set_enabled(&sTouchConfigSliderB->base, false);
             djui_base_set_enabled(&sTouchConfigSliderA->base, false);
-            djui_base_set_enabled(&sTouchConfigSliderS->base, false);
+            djui_base_set_enabled(&sTouchConfigSizeBox->base, false);
             djui_base_set_enabled(&sTouchConfigCheckboxH->base, false);
         }
 

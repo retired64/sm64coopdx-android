@@ -863,6 +863,18 @@ static void configfile_load_internal(const char *filename, bool* error) {
                             // migrate old size values (1 or 2) to tenths-based system (10 or 20)
                             if (option->touchValues->size == 1) { option->touchValues->size = 10; }
                             if (option->touchValues->size == 2) { option->touchValues->size = 20; }
+                            // map to nearest valid rendering size
+                            {
+                                static const u32 valid_sizes[] = { 5, 6, 8, 10, 16, 20, 26 };
+                                u32 sz = option->touchValues->size;
+                                u32 best = valid_sizes[0];
+                                u32 best_dist = (sz > best) ? (sz - best) : (best - sz);
+                                for (int i = 1; i < 7; i++) {
+                                    u32 d = (sz > valid_sizes[i]) ? (sz - valid_sizes[i]) : (valid_sizes[i] - sz);
+                                    if (d < best_dist) { best_dist = d; best = valid_sizes[i]; }
+                                }
+                                option->touchValues->size = best;
+                            }
                             if (strcmp(tokens[4], "true") == 0) {
                                 option->touchValues->hidden = true;
                             } else {

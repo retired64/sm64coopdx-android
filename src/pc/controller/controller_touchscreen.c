@@ -345,6 +345,11 @@ static void render_texture_scaled(const Texture *texture, s32 x, s32 y, u32 w, u
     s32 half_h = (s32)((f32)h * scale);
     s32 s_scale = (s32)(2048.0f / scale);
     s32 t_scale = (s32)(2048.0f / scale);
+    // Clamp to valid RDP 10.5 fixed-point range
+    if (s_scale < 1)     s_scale = 1;
+    if (s_scale > 32767) s_scale = 32767;
+    if (t_scale < 1)     t_scale = 1;
+    if (t_scale > 32767) t_scale = 32767;
     gSPTextureRectangle(gDisplayListHead++, x - half_w, y - half_h, x + half_w, y + half_h, G_TX_RENDERTILE, 0, 0, s_scale, t_scale);
     gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_OFF);
     gDPSetCombineMode(gDisplayListHead++, G_CC_SHADE, G_CC_SHADE);
