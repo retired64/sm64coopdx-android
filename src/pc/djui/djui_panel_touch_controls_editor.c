@@ -100,7 +100,7 @@ void djui_panel_touch_controls_editor_create(struct DjuiBase* caller) {
 
         sTouchConfigCheckboxH = djui_checkbox_create(body, "Hidden"/*DLANG(TOUCH_CONTROLS, TOUCH_CONTROLS_HIDE)*/, &configControlElements[gSelectedTouchElement].hidden, djui_panel_touch_controls_editor_update_anchor);
 
-        sTouchConfigSliderS = djui_slider_create(body, DLANG(TOUCH_CONTROLS, TOUCH_CONTROLS_SCALE), &configControlElements[gSelectedTouchElement].size, 1, 2, NULL);
+        sTouchConfigSliderS = djui_slider_create(body, DLANG(TOUCH_CONTROLS, TOUCH_CONTROLS_SCALE), &configControlElements[gSelectedTouchElement].size, 5, 30, NULL);
 
         if (gSelectedTouchElement == TOUCH_MOUSE) {
             djui_base_set_enabled(&sTouchConfigSliderR->base, false);

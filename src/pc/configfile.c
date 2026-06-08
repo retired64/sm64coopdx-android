@@ -860,6 +860,9 @@ static void configfile_load_internal(const char *filename, bool* error) {
                             sscanf(tokens[1], "%04x", &option->touchValues->x);
                             sscanf(tokens[2], "%04x", &option->touchValues->y);
                             sscanf(tokens[3], "%04x", &option->touchValues->size);
+                            // migrate old size values (1 or 2) to tenths-based system (10 or 20)
+                            if (option->touchValues->size == 1) { option->touchValues->size = 10; }
+                            if (option->touchValues->size == 2) { option->touchValues->size = 20; }
                             if (strcmp(tokens[4], "true") == 0) {
                                 option->touchValues->hidden = true;
                             } else {

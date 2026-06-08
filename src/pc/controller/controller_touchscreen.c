@@ -171,13 +171,13 @@ void touch_down(struct TouchEvent* event) {
         if (controlElements[i].touchID == 0) {
             pos = get_pos(&configControlElements[i]);
             if (pos.y == HIDE_POS) continue;
-            size = configControlElements[i].size * 100;
+            size = configControlElements[i].size * 10;
             if (!TRIGGER_DETECT(size)) continue;
             switch (controlElements[i].type) {
                 case Joystick:
-                    controlElements[i].touchID = event->touchID;
-                    gSelectedTouchElement = i;
                     if (!gInTouchConfig) {
+                        controlElements[i].touchID = event->touchID;
+                        gSelectedTouchElement = i;
                         controlElements[i].joyX = CORRECT_TOUCH_X(event->x) - pos.x;
                         controlElements[i].joyY = CORRECT_TOUCH_Y(event->y) - pos.y;
                     }
@@ -186,13 +186,14 @@ void touch_down(struct TouchEvent* event) {
                     controlElements[i].touchID = event->touchID;
                     break;
                 case Button:
-                    controlElements[i].touchID = event->touchID;
-                    gSelectedTouchElement = i;
-                    // messy
-                    if (controlElements[i].buttonID == CHAT_BUTTON && !gInTouchConfig)
-                        djui_interactable_on_key_down(configKeyChat[0]);
-                    if (controlElements[i].buttonID == PLAYERLIST_BUTTON && !gInTouchConfig)
-                        djui_interactable_on_key_down(configKeyPlayerList[0]);
+                    if (!gInTouchConfig) {
+                        controlElements[i].touchID = event->touchID;
+                        gSelectedTouchElement = i;
+                        if (controlElements[i].buttonID == CHAT_BUTTON)
+                            djui_interactable_on_key_down(configKeyChat[0]);
+                        if (controlElements[i].buttonID == PLAYERLIST_BUTTON)
+                            djui_interactable_on_key_down(configKeyPlayerList[0]);
+                    }
                     break;
             }
         }
@@ -205,7 +206,7 @@ void touch_motion(struct TouchEvent* event) {
     for(u32 i = 0; i < controlElementsLength; i++) {
         pos = get_pos(&configControlElements[i]);
         if (pos.y == HIDE_POS) continue;
-        size = configControlElements[i].size * 100;
+        size = configControlElements[i].size * 10;
         if (gInTouchConfig) {
             if (controlElements[i].touchID == event->touchID && controlElements[i].type != Mouse && gSelectedTouchElement == i) {
                 move_touch_element(event, gSelectedTouchElement);
@@ -331,6 +332,24 @@ static void render_texture(const Texture *texture, s32 x, s32 y, u32 w, u32 h, s
     gDPSetCombineMode(gDisplayListHead++, G_CC_SHADE, G_CC_SHADE);
 }
 
+static void render_texture_scaled(const Texture *texture, s32 x, s32 y, u32 w, u32 h, f32 scale, u8 r, u8 g, u8 b, u8 a) {
+    gSPClearGeometryMode(gDisplayListHead++, G_LIGHTING);
+    gDPSetCombineMode(gDisplayListHead++, G_CC_FADEA, G_CC_FADEA);
+    gDPSetRenderMode(gDisplayListHead++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
+    gDPSetTextureFilter(gDisplayListHead++, G_TF_POINT);
+    gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_ON);
+    gDPLoadTextureBlock(gDisplayListHead++, texture, G_IM_FMT_RGBA, G_IM_SIZ_16b, w, h, 0, G_TX_CLAMP, G_TX_CLAMP, 0, 0, 0, 0);
+    gDPSetEnvColor(gDisplayListHead++, r, g, b, a);
+
+    s32 half_w = (s32)((f32)w * scale);
+    s32 half_h = (s32)((f32)h * scale);
+    s32 s_scale = (s32)(2048.0f / scale);
+    s32 t_scale = (s32)(2048.0f / scale);
+    gSPTextureRectangle(gDisplayListHead++, x - half_w, y - half_h, x + half_w, y + half_h, G_TX_RENDERTILE, 0, 0, s_scale, t_scale);
+    gSPTexture(gDisplayListHead++, 0xFFFF, 0xFFFF, 0, G_TX_RENDERTILE, G_OFF);
+    gDPSetCombineMode(gDisplayListHead++, G_CC_SHADE, G_CC_SHADE);
+}
+
 
 void render_touch_controls(void) {
     if ((gGamepadActive && configAutohideTouch) || (!gDjuiInMainMenu && gDjuiDisabled)) { return; }
@@ -338,7 +357,7 @@ void render_touch_controls(void) {
     struct Position pos;
     struct Position stick;
     Colors color;
-    s32 size;
+    f32 render_scale;
     f32 normalizedVectorMultiplier;
     
     create_dl_ortho_matrix();
@@ -346,7 +365,7 @@ void render_touch_controls(void) {
     for (u32 i = 0; i < controlElementsLength; i++) {
         pos = get_pos(&configControlElements[i]);
         color = get_color(&configControlElements[i]);
-        size = configControlElements[i].size;
+        render_scale = configControlElements[i].size * 0.4f;
         if (pos.y == HIDE_POS) continue;
         switch (controlElements[i].type) {
             case Joystick:
@@ -362,16 +381,16 @@ void render_touch_controls(void) {
                     stick.x = (controlElements[i].joyX * normalizedVectorMultiplier * 2);
                     stick.y = (controlElements[i].joyY * normalizedVectorMultiplier * 2);
                 }
-                render_texture(touch_textures[TEXTURE_TOUCH_JOYSTICK_BASE], pos.x, pos.y, 32, 32, 1 + size, color.r, color.g, color.b, color.a);
-                render_texture(touch_textures[TEXTURE_TOUCH_JOYSTICK], pos.x + stick.x, pos.y + stick.y, 16, 16, 1 + size, color.r, color.g, color.b, color.a);
+                render_texture_scaled(touch_textures[TEXTURE_TOUCH_JOYSTICK_BASE], pos.x, pos.y, 32, 32, render_scale, color.r, color.g, color.b, color.a);
+                render_texture_scaled(touch_textures[TEXTURE_TOUCH_JOYSTICK], pos.x + stick.x, pos.y + stick.y, 16, 16, render_scale, color.r, color.g, color.b, color.a);
                 break;
             case Mouse:
                 break;
             case Button:
                 if (!controlElements[i].touchID || gInTouchConfig || gDjuiPanelPauseCreated) {
-                    render_texture(touch_textures[controlElements[i].buttonTexture.buttonUp], pos.x, pos.y, 16, 16, 1 + size, color.r, color.g, color.b, color.a);
+                    render_texture_scaled(touch_textures[controlElements[i].buttonTexture.buttonUp], pos.x, pos.y, 16, 16, render_scale, color.r, color.g, color.b, color.a);
                 } else {
-                    render_texture(touch_textures[controlElements[i].buttonTexture.buttonDown], pos.x, pos.y, 16, 16, 1 + size, color.r, color.g, color.b, color.a);
+                    render_texture_scaled(touch_textures[controlElements[i].buttonTexture.buttonDown], pos.x, pos.y, 16, 16, render_scale, color.r, color.g, color.b, color.a);
                 }
                 break;
         }
@@ -393,7 +412,7 @@ static void touchscreen_read(OSContPad *pad) {
     if (!gInTouchConfig && !gDjuiPanelPauseCreated) {
         for(u32 i = 0; i < controlElementsLength; i++) {
             pos = get_pos(&configControlElements[i]);
-            size = configControlElements[i].size * 100;
+            size = configControlElements[i].size * 10;
             if (pos.y == HIDE_POS) continue;
             switch (controlElements[i].type) {
                 case Joystick:
